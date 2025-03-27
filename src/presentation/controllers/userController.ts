@@ -40,8 +40,8 @@ const getAllUsers = async (req: Request, res: Response): Promise<void> => {
         page = 1,
         limit = 20,
         search = "",
-        sortBy = "name",
-        sortOrder = "asc",
+        sortBy = "createdAt",
+        sortOrder = "desc",
     } = req.query as Partial<{ page: number, limit: number, search: string, sortBy: string, sortOrder: string }>;
 
 
@@ -85,9 +85,6 @@ const getUserById = async (req: Request, res: Response): Promise<void> => {
         throw new Error("User not found");
     }
 
-    if(result.role.toString() !== req.user?.role){
-        throw new Error("You are not authorized to access this user");
-    }
 
 
     const data = {
@@ -126,8 +123,49 @@ const deleteUser = async (req: Request, res: Response): Promise<void> => {
     if (!mongoose.Types.ObjectId.isValid(id)) {
         throw new Error("Invalid ID");
     }
+
+    if(req.user && req.user.userId.toString() === id.toString()){
+        throw new Error("You cannot delete your own account");
+    }
     const result = await UserService.deletedUser(id);
     res.status(200).json({ success: true, message: 'Successfully deleted ' });
+};
+
+
+
+const getUserProfile = async (req: Request, res: Response): Promise<void> => {
+   
+    if (!req.user || !req.user.userId) {
+        throw new Error("User not found");
+    }
+    
+
+    const result = await UserService.getUserById(req.user.userId as string);
+     res.status(200).json({ success: true, data: result });
+    
+
+};
+
+
+
+
+
+const updateProfile = async (req: Request, res: Response): Promise<void> => {
+   
+    if(!req.user || !req.user.userId){
+        throw new Error("User not found");
+    }
+
+
+            const data = sanitizePayload(req.body) as any;
+    
+    const id = req.user?.userId
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+        throw new Error("Invalid ID");
+    }
+    const result = await UserService.updateProfile(id,data);
+    res.status(200).json({ success: true, message: 'Successfully updated ' });
 };
 
 
@@ -137,5 +175,7 @@ export default {
     getUserById,
     updateExistingUser,
    deleteUser ,
+   getUserProfile,
+   updateProfile,
     // getAllAgencyNames,
 };

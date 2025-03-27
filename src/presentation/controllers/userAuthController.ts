@@ -3,6 +3,8 @@ import UserService from "@application/useCases/userService"; // Import AuthServi
 import { sanitizePayload } from "@presentation/middlewares/sanitizePayload";
 import jwt from "jsonwebtoken";
 import { generateAccessToken, generateRefreshToken, verifyToken } from "@domain/utils/tokenUtils";
+import UserRepository from "@domain/repositories/UserRepository";
+import mongoose from "mongoose";
 
 
 export type Image = {
@@ -113,8 +115,21 @@ const protectRoute = async (req: Request, res: Response, next: NextFunction): Pr
         return;
     }
 
-    // Validate token and attach user to request
     const user = verifyToken(token, process.env.ACCESS_TOKEN_SECRET as string) as { userId: string; role: string };
+    
+    if(!user){
+        res.status(401).json({ success: false, message: "Unauthorized" });
+    }
+
+    if(!mongoose.Types.ObjectId.isValid(user.userId)){
+        res.status(401).json({ success: false, message: "Unauthorized" });
+    }
+
+    const isUser = await UserRepository.findById(user.userId);
+
+    if(!isUser){
+        res.status(401).json({ success: false, message: "Unauthorized" });
+    }
 
     if (!user) {
         res.status(403).json({ success: false, message: "Forbidden" });

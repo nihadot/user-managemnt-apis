@@ -20,6 +20,8 @@ const userUpdateSchema = Joi.object({
     name: nameSchemaOption,
     email: emailSchemaOption,
     password: passwordSchemaOption,
+    avatar: imageSchemaOption
+
 });
 
 
@@ -31,10 +33,28 @@ const userCreateSchema = Joi.object({
 });
 
 
+const isExistMailSchema = Joi.object({
+
+    email: emailSchema,
+});
+
+
+const isProfileUserUpdateSchema = Joi.object({
+
+    email: emailSchemaOption,
+    name:nameSchemaOption,
+    password:passwordSchemaOption,
+    avatar: imageSchemaOption
+    
+});
+
+
 
 export default{ 
     userLoginSchema,
     userSignupSchema,
     userUpdateSchema,
     userCreateSchema,
+    isExistMailSchema,
+    isProfileUserUpdateSchema
  };

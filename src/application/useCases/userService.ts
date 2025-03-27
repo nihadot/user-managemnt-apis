@@ -31,10 +31,16 @@ const login = async (email: string, password: string) => {
         throw new Error("Invalid credentials");
     }
 
+    console.log('[User]:',user)
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
         throw new Error("Invalid credentials");
     }
+
+    if(user.role === "admin"){
+        throw new Error("Cant't login with this account")
+    }
+
 
     const payload = { role: user.role, userId: user._id };
     const accessToken = generateAccessToken(payload);
@@ -155,7 +161,19 @@ const createUser = async (data: Item) => {
     }
 
 
-    const user = await UserRepository.create({ ...data });
+    if (data.password) {
+        const hashedPassword = await hashPassword(data.password);
+        
+        if (!hashedPassword) {
+            throw new Error("Failed to hash password");
+        }
+        
+        data.password = hashedPassword;
+    }
+
+
+
+    const user = await UserRepository.create({ ...data,role:"user" });
 
 
     return { user };
@@ -172,7 +190,13 @@ const getUserById = async (id: string) => {
         throw new Error("User not found");
     }
 
-    return user;
+    const data = {
+        name: user.name,
+        email: user.email,
+        avatar: user.avatar,
+    }
+
+    return data;
 };
 
 
@@ -196,6 +220,7 @@ const getAllUsers = async ({ page, limit, sortBy, sortOrder, search }: IGetAllUs
     if (search) {
 
         items = await UserRepository.aggregate([
+            { $match: {  name: search } },
             { 
                 $sort: { [sortBy]: sortOrder } 
             },
@@ -221,6 +246,8 @@ const getAllUsers = async ({ page, limit, sortBy, sortOrder, search }: IGetAllUs
         // **Step 2: If no exact match, find similar matches**
         if (items.length === 0) {
             items = await UserRepository.aggregate([
+                { $match: { name: { $regex: search, $options: "i" } } },
+
                 { 
                     $sort: { [sortBy]: sortOrder } 
                 },
@@ -283,6 +310,7 @@ const updateUser= async (id: string, data: {email?:string,password?:string,avata
     
     let updatedData = { ...data }; // Create a copy of data
     
+    console.log(updatedData,'pre')
     
     if (updatedData.password) {
         const hashedPassword = await hashPassword(updatedData.password);
@@ -293,6 +321,8 @@ const updateUser= async (id: string, data: {email?:string,password?:string,avata
         
         updatedData.password = hashedPassword; // Ensure the password is hashed before updating
     }
+
+    console.log(updatedData,'post')
     
     const updatedUser = await UserRepository.findByIdAndUpdate(id, updatedData);
     
@@ -306,7 +336,6 @@ const updateUser= async (id: string, data: {email?:string,password?:string,avata
 const deletedUser= async (id: string) => {
 
     const isExist = await UserRepository.findById(id);
-
     if (!isExist) {    
         throw new Error("User not found");
     }
@@ -319,6 +348,36 @@ const deletedUser= async (id: string) => {
 };
 
 
+const updateProfile = async (userId: string, data: any) => {
+    let updatedData = { ...data }; // Copy data to avoid mutation
+
+    console.log('[updatedData]',updatedData)
+
+    if (updatedData.password) {
+        const hashedPassword = await hashPassword(updatedData.password);
+        
+        if (!hashedPassword) {
+            throw new Error("Failed to hash password");
+        }
+        
+        updatedData.password = hashedPassword;
+    }
+
+    const user = await UserRepository.findByIdAndUpdate(userId, updatedData);
+
+    if (!user) {
+        throw new Error("User not found");
+    }
+
+
+    console.log('[user]',user);
+
+    return {
+        name: user.name,
+        email: user.email,
+        avatar: user.avatar,
+    };
+};
 
 export default {
     login,
@@ -330,4 +389,5 @@ export default {
     getAllUsers,
     updateUser,
     deletedUser,
+    updateProfile
 };

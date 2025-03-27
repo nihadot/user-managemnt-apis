@@ -14,11 +14,20 @@ router.post("/signup", validateRequest(AdminValidate.adminSignupSchema), asyncEr
 
 router.get("/profile", authenticate(["admin"]), asyncErrorHandler(AdminController.getProfile));
 
-router.put("/profile",validateRequest(AdminValidate.adminUpdateSchema), authenticate(["admin"]), asyncErrorHandler(AdminController.updateProfile));
+router.put("/profile", validateRequest(AdminValidate.adminUpdateSchema), authenticate(["admin"]), asyncErrorHandler(AdminController.updateProfile));
 
-router.post('/refresh-token', asyncErrorHandler(AdminController.refreshToken))
+// router.put("/protect-route", validateRequest(AdminValidate.adminUpdateSchema), authenticate(["admin"]), asyncErrorHandler(AdminController.updateProfile));
+
+router.get('/refresh-token', asyncErrorHandler(AdminController.refreshToken))
 
 router.get('/protect-route', asyncErrorHandler(AdminController.protectRoute))
 
-router.post('/logout', authenticate(["admin"]), asyncErrorHandler(AdminController.logout))
+router.get('/profile', asyncErrorHandler(AdminController.protectRoute))
+
+router.get('/logout', authenticate(["admin"]), asyncErrorHandler(AdminController.logout))
+
+router.get('/me', authenticate(["admin"]), asyncErrorHandler(AdminController.profile))
+
+router.put('/me', authenticate(["admin"]), asyncErrorHandler(AdminController.updateProfile))
+
 export default router;

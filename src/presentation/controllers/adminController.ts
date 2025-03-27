@@ -3,6 +3,8 @@ import AdminService from "@application/useCases/adminService"; // Import AuthSer
 import { sanitizePayload } from "@presentation/middlewares/sanitizePayload";
 import jwt from "jsonwebtoken";
 import { generateAccessToken, generateRefreshToken, verifyToken } from "@domain/utils/tokenUtils";
+import AdminRepository from "@domain/repositories/AdminRepository";
+import mongoose from "mongoose";
 
 type Item = {
     name: string;
@@ -23,14 +25,14 @@ const login = async (req: Request, res: Response): Promise<void> => {
     const { email, password } = req.body;
     const { accessToken, refreshToken , user } = await AdminService.login(email, password);
 
-    res.cookie('accessToken', accessToken, {
+    res.cookie('adminAccessToken', accessToken, {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production', // HTTPS only in production
         sameSite: 'lax', // Protects against CSRF
         maxAge: 2 * 60 * 1000, // 15 minutes
     });
 
-    res.cookie('refreshToken', refreshToken, {
+    res.cookie('adminRefreshToken', refreshToken, {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
         sameSite: 'lax',
@@ -68,8 +70,8 @@ const updateProfile = async (req: Request, res: Response): Promise<void> => {
 };
 
 const refreshToken = async (req: Request, res: Response): Promise<void> => {
-    const token = req.cookies.refreshToken;
-
+    const token = req.cookies['adminRefreshToken'];
+    console.log(token,'[]')
     if (!token) {
         res.status(401).json({ success: false, message: "No refresh token provided" });
         return;
@@ -77,22 +79,39 @@ const refreshToken = async (req: Request, res: Response): Promise<void> => {
 
     const decoded = jwt.verify(token, process.env.REFRESH_TOKEN_SECRET as string) as { userId: string; role: string };
 
+
+    // console.log(decoded && decoded.role !== "admin",'---')
     if(decoded && decoded.role !== "admin"){
         res.status(401).json({ success: false, message: "Unauthorized" });
+        return;
+    }
+
+
+    if (!mongoose.Types.ObjectId.isValid(decoded.userId)) {
+            throw new Error("Invalid ID or slug");
+    }
+
+    const isExistUser = await AdminRepository.findById(decoded.userId)
+   
+    // console.log(isExistUser,'isExistUser')
+    if(!isExistUser){
+  
+        res.status(401).json({ success: false, message: "Unauthorized" });
+  return;
     }
     
     const payload = { role: decoded.role, userId: decoded.userId };
     const accessToken = generateAccessToken(payload);
     const refreshToken = generateRefreshToken(payload);
 
-    res.cookie('accessToken', accessToken, {
+    res.cookie('adminAccessToken', accessToken, {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
         sameSite: 'lax',
         maxAge: 2 * 60 * 1000, // 15 minutes
     });
 
-    res.cookie('refreshToken', refreshToken, {
+    res.cookie('adminRefreshToken', refreshToken, {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
         sameSite: 'lax',
@@ -100,12 +119,13 @@ const refreshToken = async (req: Request, res: Response): Promise<void> => {
     });
 
     res.status(200).json({ success: true,accessToken:accessToken,refreshToken:refreshToken });
-
+return;
 };
 
 const protectRoute = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
 
-    const token = req.cookies.accessToken;
+    const token = req.cookies.adminAccessToken;
+
 
     if (!token) {
         res.status(401).json({ success: false, message: "Unauthorized" });
@@ -122,30 +142,46 @@ const protectRoute = async (req: Request, res: Response, next: NextFunction): Pr
 
     res.status(200).json({ success: true, message: "logged successful" });
 
-
 };
 
 
 const logout = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
 
-    res.cookie('accessToken', '', {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'lax',
-        maxAge: 2 * 60 * 1000, // 15 minutes
-    });
+    console.log(req.cookies,'000')
 
-    res.cookie('refreshToken', '', {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'lax',
-        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-    });
+    // res.cookie('adminAccessToken', '', {
+    //     httpOnly: true,
+    //     secure: process.env.NODE_ENV === 'production',
+    //     sameSite: 'lax',
+    //     maxAge: 2 * 60 * 1000, // 15 minutes
+    // });
+
+    // res.cookie('adminRefreshToken', '', {
+    //     httpOnly: true,
+    //     secure: process.env.NODE_ENV === 'production',
+    //     sameSite: 'lax',
+    //     maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+    // });
+
+    res.clearCookie("adminAccessToken")
+    res.clearCookie("adminRefreshToken")
 
 
     res.status(200).json({ message: "Logout successful" });
 }
 
+
+const profile = async (req: Request, res: Response): Promise<void> => {
+    if (!req.user) {
+        res.status(401).json({ success: false, message: "Unauthorized" });
+        return;
+    }
+
+    console.log(req.user,'000')
+    
+    const user = await AdminService.fetchProfile(req.user?.userId);
+    res.status(200).json({ success: true, data: user });
+};
 export default {
     login,
     signup,
@@ -153,5 +189,6 @@ export default {
     refreshToken,
     protectRoute,
     logout,
-    updateProfile
+    updateProfile,
+    profile
 }

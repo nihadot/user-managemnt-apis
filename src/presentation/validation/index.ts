@@ -5,7 +5,7 @@ const emailSchema = Joi.string().email().trim().lowercase().required();
 const passwordSchema = Joi.string()
     .min(8)
     .max(30)
-    .pattern(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]+$/)
+    .pattern( /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$#!%*?&]{8,30}$/)
     .required()
     .messages({
         "string.pattern.base": "Password must include at least one uppercase letter, one lowercase letter, one number, and one special character.",
@@ -21,7 +21,7 @@ const emailSchemaOption = Joi.string().email().trim().lowercase().optional();
 const passwordSchemaOption = Joi.string()
     .min(8)
     .max(30)
-    .pattern(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]+$/)
+    .pattern( /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$#!%*?&]{8,30}$/)
     .optional()
     .messages({
         "string.pattern.base": "Password must include at least one uppercase letter, one lowercase letter, one number, and one special character.",

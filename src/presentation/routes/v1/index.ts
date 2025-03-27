@@ -11,6 +11,9 @@ router.use('/auth/user', userAuthRoutes);
 
 router.use('/users', userRoute);
 
+import mailExistRoute from "./mailExist";
+router.use('/users/mail-exist', mailExistRoute);
+
 
 
 

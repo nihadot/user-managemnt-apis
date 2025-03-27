@@ -129,9 +129,29 @@ const updatedProfile = async (userId: string, data: EditItem) => {
 
 
 
+const fetchProfile = async (userId: string) => {
+
+  
+
+    const user = await AdminRepository.findById(userId);
+
+    if (!user) {
+        throw new Error("User not found");
+    }
+
+    return {
+        name: user.name,
+        email: user.email,
+        avatar: user.avatar,
+    };
+};
+
+
+
 export default {
     login,
     signup,
     getProfile,
     updatedProfile,
+    fetchProfile
 };
